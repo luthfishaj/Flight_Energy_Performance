@@ -15,11 +15,6 @@ market.**
 The pipeline runs end to end, from raw downloads to a five-page Power BI
 dashboard. [See all five pages](#the-dashboard).
 
-> New here? Start with [`docs/roadmap.md`](docs/roadmap.md) for what this
-> is, then [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) for how to
-> run it. [`docs/PROJECT_WALKTHROUGH.md`](docs/PROJECT_WALKTHROUGH.md)
-> explains every column, file and decision.
-
 ---
 
 ## What it does
