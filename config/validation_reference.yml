@@ -1,0 +1,30 @@
+# Published cruise fuel burn, for checking the model against reality.
+#
+# A physics model nobody has checked is just a plausible-looking guess. So
+# the modelled cruise burn gets compared against these published figures,
+# and the comparison is reported rather than quietly buried.
+#
+# Tonnes of fuel per hour at a normal cruise altitude and weight.
+#
+# IMPORTANT: these are working figures taken from typical published
+# performance data, and every one still needs a proper citation before it
+# is quoted anywhere. Manufacturer performance manuals, EUROCONTROL's
+# aircraft performance database, and airline fuel reports are the places to
+# look. Add the source next to each line as it gets confirmed.
+#
+# Cruise burn varies with weight, altitude and speed, so no single number is
+# exactly right. Anything within about 10% counts as agreement.
+
+cruise_burn_tonnes_per_hour:
+  A319: 2.3      # TODO: cite
+  A320: 2.5      # TODO: cite
+  A321: 2.9      # TODO: cite
+  B738: 2.6      # TODO: cite
+  A332: 5.8      # TODO: cite
+  A333: 6.1      # TODO: cite
+  B77W: 7.8      # TODO: cite
+  A388: 12.0     # TODO: cite
+
+# How far from the published figure the model is allowed to be before the
+# check counts as a failure rather than a pass.
+tolerance: 0.15

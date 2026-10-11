@@ -1,0 +1,44 @@
+# The French airports in scope, by ICAO code.
+#
+# There are no coordinates in here on purpose. They get loaded from the
+# OurAirports dataset instead (see src/flightperf/ingest). The coordinates
+# are used to calculate the shortest distance between two airports, and one
+# wrong figure would quietly break the route efficiency numbers with no
+# obvious sign of it.
+
+# The eight biggest. Start with these and get the pipeline working.
+core:
+  - LFPG   # Paris Charles de Gaulle
+  - LFPO   # Paris Orly
+  - LFMN   # Nice
+  - LFLL   # Lyon
+  - LFML   # Marseille
+  - LFBO   # Toulouse
+  - LFBD   # Bordeaux
+  - LFRS   # Nantes
+
+# Add these once the pipeline runs properly on the first eight.
+extended:
+  - LFSB   # Basel-Mulhouse (shared between France and Switzerland)
+  - LFST   # Strasbourg
+  - LFMT   # Montpellier
+  - LFQQ   # Lille
+  - LFOB   # Beauvais
+  - LFMP   # Perpignan
+  - LFLC   # Clermont-Ferrand
+  - LFRB   # Brest
+  - LFRN   # Rennes
+  - LFBZ   # Biarritz
+  - LFTH   # Toulon
+  - LFLB   # Chambery
+  - LFJL   # Metz-Nancy
+  - LFBT   # Tarbes-Lourdes
+
+# Corsica is kept separate. France has banned some short domestic flights
+# where the train is a reasonable alternative, but there is no train to
+# Corsica - so these routes make a useful comparison group.
+corsica:
+  - LFKJ   # Ajaccio
+  - LFKB   # Bastia
+  - LFKF   # Figari
+  - LFKC   # Calvi

@@ -1,0 +1,31 @@
+# Downloaded data — never commit. The flight list alone is 200 MB, and both
+# files can be fetched again by the pipeline.
+# The directories are re-included so git descends into them and the .gitkeep
+# files survive; otherwise a fresh clone is missing the folders the pipeline
+# writes into.
+data/raw/**
+!data/**/
+!data/**/.gitkeep
+
+# Power BI
+powerbi/*.pbix.bak
+~$*.pbix
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Secrets
+.env
+
+# Notebooks
+.ipynb_checkpoints/
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store

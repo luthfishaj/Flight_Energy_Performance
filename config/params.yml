@@ -1,0 +1,138 @@
+# All the numbers that can be changed without touching the code.
+#
+# Everything here is an assumption, not a fact. Keeping them in one file
+# means (a) anyone reading the project can check what was assumed and
+# (b) it is easy to test how much the answer changes if an assumption is
+# wrong.
+#
+# Every figure that came from outside carries its source and the date it
+# was read. Anything still null has not been looked up, and the code
+# refuses to run the steps that need it rather than substituting a
+# default.
+
+meta:
+  # One month of traffic - June 2022 - priced at June 2022 carbon and fuel
+  # prices. The money figures therefore mean "what this traffic cost at the
+  # time, at market prices", NOT "what it would cost under today's rules".
+  # Pricing the period matches the data rather than mixing 2022 flying with
+  # 2026 prices.
+  traffic_month: "2022-06"
+  price_period: "2022-06"
+  currency: EUR
+  last_verified: 2026-09-26
+
+prices:
+  # EUA, June 2022: volume-weighted average auction clearing price of the
+  # 13 general-allowance auctions held on the EEX common auction platform
+  # in June 2022 (30.6 M allowances). Matches the flight data month.
+  # (The single aviation-allowance EUAA auction that month cleared at
+  # 84.45; EUA is used as the benchmark because it has 13 auctions.)
+  # Source: European Commission, "Auctions by the Common Auction Platform -
+  # April, May, June 2022", Table 1 (published 05/08/2022).
+  # https://climate.ec.europa.eu/system/files/2022-12/cap_report_202206_en.pdf
+  # Accessed 2026-09-25.
+  eua_eur_per_tonne: 82.79
+
+  # Jet A-1, June 2022: mean of the 5 weekly "Europe & CIS" USD/mt values
+  # in the IATA Jet Fuel Price Monitor (Platts data) for weeks dated 3, 10,
+  # 17, 24 June and 1 July 2022 (all weeks overlapping June):
+  # 1357.50, 1431.25, 1419.88, 1406.00, 1285.25 -> mean 1379.98 USD/t.
+  # Read from Wayback Machine snapshots of
+  # iata.org/en/publications/economics/fuel-monitor/ (table_MMDDYYYY.png),
+  # e.g. snapshot 20220614033039 for the 10 June table.
+  # Consistency check: USD/mt / USD/bbl = 7.89 in every week.
+  # Converted at ECB June 2022 monthly average 1.0566 USD/EUR
+  # (series EXR.M.USD.EUR.SP00.A) -> 1306 EUR/t.
+  # (Using only the 4 weeks dated in June would give 1329 EUR/t, +1.7%.)
+  # Refinery-gate spot price; excludes into-plane fees and taxes.
+  # "Europe & CIS" is IATA's regional basket, not France-specific.
+  # Accessed 2026-09-26.
+  jet_a1_eur_per_tonne: 1306
+
+  # Sustainable aviation fuel, euros per tonne.
+  # Not looked up, and nothing reads it yet. It would be needed to cost the
+  # SAF blending mandate, which is not part of the analysis.
+  saf_eur_per_tonne: null
+
+emissions_factors:
+  # Burning 1 tonne of jet fuel produces about 3.16 tonnes of CO2.
+  # This is the standard figure used by ICAO and in EU reporting.
+  co2_per_tonne_jet_a1: 3.16
+
+eu_ets:
+  # In 2022 airlines still received a large share of their aviation
+  # allowances free of charge. Setting this to zero is deliberate: the
+  # result is the CARBON COST AT MARKET VALUE - what the emissions were
+  # worth - not the cash airlines actually handed over. Every place the
+  # cost is reported has to say so.
+  free_allocation_share: 0.0
+
+  # Which flights the EU carbon market covers, as a share of their CO2.
+  # Read by kpi/costs.py, which sets ets_scope_factor per flight from these.
+  #
+  # Note on Switzerland: ingest/airports.py counts CH as EEA because it
+  # runs a linked carbon market, so Paris-Geneva is already treated as
+  # fully covered. The UK is NOT in that list, so flights to London get
+  # 0.0 here and are probably undercounted for 2022.
+  # TODO: find a source for the 2022 scope, then revisit both.
+  scope:
+    intra_eea: 1.0
+    eea_to_third_country: 0.0
+    third_country_to_eea: 0.0
+
+refueleu:
+  # Rules requiring a minimum share of sustainable fuel at EU airports.
+  # Not used by any code - the SAF mandate is outside the analysis.
+  # TODO: check these percentages against the actual regulation if it is
+  # ever brought in.
+  saf_blend_mandate:
+    2025: 0.02
+    2030: 0.06
+
+fuel_model:
+  # The distance used is the straight line between the two airports. Real
+  # flights are longer - they follow airways, avoid weather and queue for
+  # landing - so the modelled fuel needs scaling up.
+  #
+  # Horizontal en-route flight efficiency of the actual trajectory (KEA),
+  # Union-wide, 2022 = 2.96% extra distance -> factor 1 + 0.0296.
+  # Year 2022 chosen to match the flight data (June 2022). 2022 was the
+  # worst year since 2016 (target 2.37%), partly from airspace closures
+  # after the invasion of Ukraine.
+  # EN-ROUTE ONLY: excludes the terminal area around each airport, so it
+  # understates the full gate-to-gate extension. Measured in SES airspace;
+  # applied here to non-European legs as well.
+  # Source: PRB Annual Monitoring Report 2022 (Oct 2023), Table 1.
+  # https://transport.ec.europa.eu/system/files/2023-10/PRB_Annual_Monitoring_Report_2022.pdf
+  # Accessed 2026-09-25.
+  #
+  # Applied by kpi/costs.py, not by the fuel step. fuel_burn_kg stays as
+  # the raw model output over the straight line; fuel_burn_adjusted_kg is
+  # the corrected figure. Keeping both means the size of the correction
+  # stays visible.
+  route_extension_factor: 1.0296
+
+  # Flights are assumed to be carrying a typical load rather than being
+  # empty or full. Passenger numbers are not in the data.
+  # Not read by any code: the fuel model uses OpenAP's own "low" passenger
+  # figure for the aircraft type instead.
+  assumed_load_factor: null
+
+quality:
+  # Limits for the data quality checks.
+  # Breaking a HARD limit means the flight is dropped from the fuel analysis.
+  # Breaking a SOFT limit means it is kept but flagged. Both get reported.
+
+  min_flight_duration_s: 300              # 5 minutes
+  max_flight_duration_s: 64800            # 18 hours
+
+  # Average speed over the whole flight, worked out as straight-line
+  # distance divided by time. Short flights spend a lot of that time
+  # climbing and descending, so the lower limit has to be generous.
+  min_avg_speed_kt: 60
+  max_avg_speed_kt: 650
+
+  # How far the first and last recorded positions are allowed to be from
+  # the airports the source says the flight used. Beyond this the airport
+  # was guessed rather than observed.
+  max_airport_distance_nm: 50
