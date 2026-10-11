@@ -243,19 +243,23 @@ def apply_to_flights(con):
 def validate(con):
     """Compare the modelled cruise burn against published figures.
 
+    Both sides are kilograms of fuel per nautical mile in cruise - the
+    published side comes from ICAO's fuel table, see
+    config/validation_reference.yml for how.
+
     Returns one row per aircraft type: what the model says, what the
     reference says, and the ratio between them.
     """
     reference = _load_yaml("validation_reference.yml")
-    published = reference.get("cruise_burn_tonnes_per_hour", {})
+    published = reference.get("cruise_burn_kg_per_nm", {})
     tolerance = reference.get("tolerance", 0.15)
 
     results = []
-    for type_icao, real_tph in sorted(published.items()):
+    for type_icao, real_kg_nm in sorted(published.items()):
         try:
             estimator = FuelEstimator(type_icao)
         except (UnsupportedAircraft, KeyError, ValueError, FileNotFoundError):
-            results.append((type_icao, None, real_tph, None, "not modelled"))
+            results.append((type_icao, None, real_kg_nm, None, "not modelled"))
             continue
 
         # A representative mid-cruise weight: empty plus payload, plus a
@@ -267,9 +271,10 @@ def validate(con):
             alt=estimator.info["cruise_alt_ft"],
             vs=0,
         ))
-        model_tph = flow_kg_s * 3600 / 1000.0
-        ratio = model_tph / real_tph
+        # Fuel per hour divided by nautical miles per hour.
+        model_kg_nm = flow_kg_s * 3600 / estimator.cruise_tas_kt
+        ratio = model_kg_nm / real_kg_nm
         verdict = "ok" if abs(ratio - 1.0) <= tolerance else "OUT OF RANGE"
-        results.append((type_icao, model_tph, real_tph, ratio, verdict))
+        results.append((type_icao, model_kg_nm, real_kg_nm, ratio, verdict))
 
     return results, tolerance

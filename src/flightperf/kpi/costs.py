@@ -13,6 +13,7 @@ missing carbon price as zero and producing a confident wrong answer.
 import logging
 
 from flightperf.config import get_settings
+from flightperf.fuel.run import validate
 
 log = logging.getLogger(__name__)
 
@@ -50,8 +51,32 @@ ALTER TABLE core.fact_flight
     ADD COLUMN IF NOT EXISTS fuel_burn_adjusted_kg DOUBLE PRECISION,
     ADD COLUMN IF NOT EXISTS co2_adjusted_kg       DOUBLE PRECISION,
     ADD COLUMN IF NOT EXISTS fuel_cost_eur         DOUBLE PRECISION,
-    ADD COLUMN IF NOT EXISTS ets_cost_eur          DOUBLE PRECISION;
+    ADD COLUMN IF NOT EXISTS ets_cost_eur          DOUBLE PRECISION,
+    ADD COLUMN IF NOT EXISTS carbon_market         VARCHAR,
+    ADD COLUMN IF NOT EXISTS fuel_calibration_factor DOUBLE PRECISION;
 """
+
+
+def calibration_factors(con):
+    """Per-type factors that bring the model into line with ICAO.
+
+    The validation step compares OpenAP's cruise burn with ICAO's published
+    fuel table, type by type. Where they differ, ICAO is taken as the
+    reference: it is built from airline fuel data, while OpenAP is a
+    generic physics model. The factor is ICAO divided by the model, so a
+    type the model overstates by 23% gets 1 / 1.23.
+
+    Worked out from config/validation_reference.yml on every run rather
+    than written down, so the two can never drift apart. The factor scales
+    the whole flight, climb and descent included, although ICAO's figure is
+    for cruise - cruise is most of the fuel on all but the shortest flights.
+    """
+    results, _ = validate(con)
+    return {
+        type_icao: 1.0 / ratio
+        for type_icao, _, _, ratio, _ in results
+        if ratio
+    }
 
 
 def missing_settings():
@@ -83,44 +108,112 @@ def compute_costs(con):
     fuel_price = settings.require("prices.jet_a1_eur_per_tonne")
     extension = settings.require("fuel_model.route_extension_factor")
 
-    scope = settings.params["eu_ets"]["scope"]
-    free_allocation = settings.params["eu_ets"].get("free_allocation_share") or 0.0
+    calibrate = settings.params["fuel_model"].get("calibrate_to_icao", False)
+
+    ets = settings.params["eu_ets"]
+    free_allocation = ets.get("free_allocation_share") or 0.0
+    other_schemes = ets["other_schemes_to_eea"]
 
     with con.cursor() as cur:
         cur.execute(EXTRA_COLUMNS)
 
-        # How much of a flight's CO2 the EU carbon market covers. Flights
-        # between two European airports are in scope; flights leaving or
-        # arriving from outside fall under different arrangements.
+        # Which carbon market covered each flight, by the 2022 rules set out
+        # in params.yml. Direction matters: Paris-London is EU ETS but
+        # London-Paris is UK ETS. Each airport is first sorted into a zone -
+        # the EEA proper, an outermost region (exempt in 2022), or its
+        # country code - and the market follows from the two zones.
+        #
+        # Flights with an unknown airport get no market and a factor of 0,
+        # but they fail the quality checks anyway.
+        cur.execute("UPDATE core.fact_flight SET carbon_market = NULL")
         cur.execute(
             """
+            WITH zone AS (
+                SELECT
+                    airport_icao,
+                    CASE
+                        WHEN iso_country = ANY(%(om_countries)s)
+                          OR iso_region  = ANY(%(om_regions)s) THEN 'OUTERMOST'
+                        WHEN is_eea THEN 'EEA'
+                        ELSE iso_country
+                    END AS zone
+                FROM core.dim_airport
+            )
             UPDATE core.fact_flight f
-            SET ets_scope_factor = CASE
-                WHEN f.is_intra_eea THEN %s
-                WHEN ao.is_eea AND NOT coalesce(ad.is_eea, FALSE) THEN %s
-                WHEN coalesce(ao.is_eea, FALSE) = FALSE AND ad.is_eea THEN %s
-                ELSE 0.0
-            END
-            FROM core.dim_airport ao, core.dim_airport ad
-            WHERE ao.airport_icao = f.origin_icao
-              AND ad.airport_icao = f.destination_icao
+            SET carbon_market = CASE
+                    WHEN zo.zone = 'EEA'
+                     AND (zd.zone = 'EEA' OR zd.zone = ANY(%(eu_dest)s))
+                        THEN 'EU ETS'
+                    WHEN zd.zone = 'EEA' AND zo.zone = ANY(%(other_origins)s)
+                        THEN (%(other_names)s::text[])[
+                                 array_position(%(other_origins)s::text[], zo.zone)]
+                    ELSE 'None'
+                END
+            FROM zone zo, zone zd
+            WHERE zo.airport_icao = f.origin_icao
+              AND zd.airport_icao = f.destination_icao
             """,
-            [scope["intra_eea"], scope["eea_to_third_country"],
-             scope["third_country_to_eea"]],
+            {
+                "om_countries": ets["outermost_regions"]["countries"],
+                "om_regions": ets["outermost_regions"]["regions"],
+                "eu_dest": ets["eu_ets_departures_to"],
+                "other_origins": list(other_schemes.keys()),
+                "other_names": list(other_schemes.values()),
+            },
         )
 
-        # The modelled fuel assumes the straight-line distance. Real flights
-        # are longer, so it gets scaled up. The original figure is kept so
-        # the size of the correction stays visible.
+        # Only the EU ETS share is priced, so that is what the factor counts.
         cur.execute(
             """
             UPDATE core.fact_flight
-            SET fuel_burn_adjusted_kg = fuel_burn_kg * %(ext)s,
-                co2_adjusted_kg       = co2_kg * %(ext)s,
-                fuel_cost_eur         = fuel_burn_kg * %(ext)s / 1000.0 * %(fuel)s,
+            SET ets_scope_factor = CASE WHEN carbon_market = 'EU ETS'
+                                        THEN 1.0 ELSE 0.0 END
+            """
+        )
+
+        # Per-type correction to ICAO's published cruise burn. See
+        # calibration_factors() for how the factors are worked out.
+        factors = calibration_factors(con) if calibrate else {}
+        cur.execute("UPDATE core.fact_flight SET fuel_calibration_factor = NULL")
+        cur.execute(
+            "CREATE TEMP TABLE calibration (type_icao TEXT PRIMARY KEY, "
+            "factor DOUBLE PRECISION) ON COMMIT DROP"
+        )
+        cur.executemany(
+            "INSERT INTO calibration VALUES (%s, %s)", list(factors.items())
+        )
+        # A type's own factor if it was checked, otherwise the factor of the
+        # stand-in type it is modelled as, otherwise no correction.
+        cur.execute(
+            """
+            UPDATE core.fact_flight f
+            SET fuel_calibration_factor = coalesce(own.factor, proxy.factor, 1.0)
+            FROM core.dim_aircraft_type t
+            LEFT JOIN calibration own   ON own.type_icao   = t.type_icao
+            LEFT JOIN calibration proxy ON proxy.type_icao = t.openap_proxy_type
+            WHERE t.type_icao = f.type_icao
+            """
+        )
+
+        # The modelled fuel assumes the straight-line distance. Real flights
+        # are longer, so it gets scaled up, and then corrected to ICAO. The
+        # original figure is kept so the size of both corrections stays
+        # visible.
+        cur.execute(
+            """
+            UPDATE core.fact_flight
+            SET fuel_burn_adjusted_kg = fuel_burn_kg * %(ext)s
+                                        * coalesce(fuel_calibration_factor, 1.0),
+                co2_adjusted_kg       = co2_kg * %(ext)s
+                                        * coalesce(fuel_calibration_factor, 1.0),
+                fuel_cost_eur         = fuel_burn_kg * %(ext)s
+                                        * coalesce(fuel_calibration_factor, 1.0)
+                                        / 1000.0 * %(fuel)s,
                 -- Airlines pay for the covered share of their emissions,
                 -- less whatever free allowances still apply.
-                ets_cost_eur          = co2_kg * %(ext)s / 1000.0
+                ets_cost_eur          = co2_kg * %(ext)s
+                                        * coalesce(fuel_calibration_factor, 1.0)
+                                        / 1000.0
                                         * coalesce(ets_scope_factor, 0)
                                         * (1 - %(free)s)
                                         * %(eua)s
@@ -145,6 +238,18 @@ def compute_costs(con):
         )
         fuel_t, co2_t, fuel_eur, ets_eur, n_in_scope = cur.fetchone()
 
+        # CO2 per carbon market, over the flights the analysis trusts.
+        cur.execute(
+            """
+            SELECT coalesce(carbon_market, 'None'), sum(co2_adjusted_kg) / 1000.0
+            FROM core.fact_flight
+            WHERE fuel_burn_kg IS NOT NULL AND is_analysis_eligible
+            GROUP BY 1
+            ORDER BY 2 DESC
+            """
+        )
+        co2_by_market = {market: float(t) for market, t in cur.fetchall()}
+
     con.commit()
     log.info("costed %s flights", format(n_priced, ","))
     return {
@@ -154,6 +259,8 @@ def compute_costs(con):
         "co2_tonnes": float(co2_t or 0),
         "fuel_cost_eur": float(fuel_eur or 0),
         "ets_cost_eur": float(ets_eur or 0),
+        "co2_by_market": co2_by_market,
+        "calibrated_types": len(factors),
         "route_extension_factor": extension,
         "eua_price": eua_price,
         "fuel_price": fuel_price,

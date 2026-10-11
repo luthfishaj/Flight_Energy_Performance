@@ -312,26 +312,27 @@ def build_validate():
 
     table = Table(title=f"Modelled cruise burn vs published (tolerance {tolerance:.0%})")
     table.add_column("type", style="cyan")
-    table.add_column("model t/h", justify="right")
-    table.add_column("published t/h", justify="right")
+    table.add_column("model kg/nm", justify="right")
+    table.add_column("ICAO kg/nm", justify="right")
     table.add_column("ratio", justify="right")
     table.add_column("verdict")
 
     n_ok = 0
-    for type_icao, model_tph, real_tph, ratio, verdict in results:
+    for type_icao, model_kg_nm, real_kg_nm, ratio, verdict in results:
         if verdict == "ok":
             n_ok += 1
         table.add_row(
             type_icao,
-            f"{model_tph:.2f}" if model_tph else "-",
-            f"{real_tph:.1f}",
+            f"{model_kg_nm:.2f}" if model_kg_nm else "-",
+            f"{real_kg_nm:.2f}",
             f"{ratio:.2f}" if ratio else "-",
             verdict if verdict == "ok" else "[red]" + verdict + "[/red]",
         )
     console.print(table)
     console.print(f"{n_ok} of {len(results)} types agree within tolerance.")
-    console.print("[dim]The published figures in config/validation_reference.yml "
-                  "still need citations.[/dim]")
+    console.print("[dim]Published figures: ICAO Carbon Emissions Calculator "
+                  "Methodology v13.1, Appendix C - see "
+                  "config/validation_reference.yml.[/dim]")
 
 
 @build_app.command("kpi")
@@ -364,12 +365,19 @@ def build_kpi():
     console.print("  flights costed        : " + format(result["flights"], ","))
     console.print("  in EU carbon scope    : " + format(result["in_ets_scope"], ","))
     console.print("  route correction used : x" + f"{result['route_extension_factor']:.3f}")
+    console.print("  ICAO calibration      : " + (f"{result['calibrated_types']} types"
+                                                  if result["calibrated_types"] else "off"))
     console.print("  fuel (corrected)      : " + format(round(result["fuel_tonnes"]), ",")
                   + " tonnes")
     console.print("  CO2 (corrected)       : " + format(round(result["co2_tonnes"]), ",")
                   + " tonnes")
     console.print("  fuel cost             : EUR " + format(round(result["fuel_cost_eur"]), ","))
     console.print("  carbon cost           : EUR " + format(round(result["ets_cost_eur"]), ","))
+    console.print()
+    console.print("CO2 by carbon market (eligible flights):")
+    total = sum(result["co2_by_market"].values()) or 1
+    for market, tonnes in result["co2_by_market"].items():
+        console.print(f"  {market:<10}: {round(tonnes):>10,} tonnes  {tonnes / total:6.1%}")
 
 
 @app.command()

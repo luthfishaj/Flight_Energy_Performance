@@ -231,6 +231,34 @@ PROGRESS = [
             "in place. Fuel, CO2 and cost totals were unchanged."
         ),
     ),
+    (
+        "2026-10-11",
+        "Carbon market scope settled",
+        (
+            "The 2022 rules depend on direction: Paris-London and "
+            "Paris-Geneva were in the EU ETS, London-Paris in the UK ETS and "
+            "Geneva-Paris in the Swiss ETS; flights to the outermost regions "
+            "were exempt. The code had counted Switzerland as fully in and "
+            "the UK as fully out. Each flight now gets a carbon_market label, "
+            "sourced to the European Commission, Transport & Environment and "
+            "Regulation (EU) 2017/2392."
+        ),
+    ),
+    (
+        "2026-10-11",
+        "Fuel model checked against ICAO and corrected",
+        (
+            "The eight uncited cruise-burn figures were replaced with ICAO's "
+            "published fuel table, and the check widened to 16 types covering "
+            "93 percent of the CO2. Nine agreed within 15 percent; the 777 "
+            "family was 23-37 percent high and the A320neo and A321neo 23-31 "
+            "percent low. Each checked type is now scaled to ICAO, keeping the "
+            "raw output. Final figures: 506,751 tonnes of fuel, 1.60 million "
+            "tonnes of CO2, EUR 662 million of fuel and EUR 39 million of "
+            "carbon. 70 percent of the CO2 falls outside the EU carbon "
+            "market, and 68.5 percent under no carbon market at all."
+        ),
+    ),
 ]
 
 
@@ -246,44 +274,32 @@ STATUS = [
     ("Source tracking", "Done", "URL, date, size and checksum recorded per file"),
     ("Data quality checks", "Done", "15 checks; 77.5 percent of flights usable"),
     ("Fuel model", "Done", "OpenAP; fuel and CO2 for 59,772 flights"),
-    ("Model validation", "Done", "7 of 8 types within 15 percent of published"),
-    ("Carbon costs", "Done", "Priced at June 2022 market prices, sources cited"),
+    ("Model validation", "Done", "16 types vs ICAO, 93 percent of CO2; corrected to ICAO"),
+    ("Carbon costs", "Done", "June 2022 prices; 2022 EU ETS scope by direction"),
     ("Power BI report", "Done", "Five pages, built on core.v_flight_kpi"),
 ]
 
 
 NEXT_STEPS = [
     (
-        "Write up the finding: 74 percent of the CO2 from French air traffic "
-        "falls outside the EU carbon market, because the long-haul flights "
-        "that dominate emissions are not covered."
+        "Optional: write up the finding - 70 percent of the CO2 from French "
+        "air traffic falls outside the EU carbon market, because the "
+        "long-haul flights that dominate emissions are not covered."
     ),
-    (
-        "Settle whether flights to the UK and Switzerland were covered by the "
-        "EU carbon market in 2022. It moves the 74 percent figure directly."
-    ),
-    "Cite the eight cruise-burn figures in config/validation_reference.yml.",
-    "Load June 2019 as well, to compare a pre-COVID month against June 2022.",
+    "Optional: load June 2019 as well, to compare a pre-COVID month against June 2022.",
 ]
 
 
 OPEN_QUESTIONS = [
-    (
-        "Whether flights from the EEA to the UK and Switzerland were covered "
-        "by the EU carbon market in 2022. Switzerland is currently counted as "
-        "inside, the UK as outside, and neither has a source. It moves the "
-        "headline finding that 74 percent of the CO2 is uncovered."
-    ),
     (
         "The route correction uses EUROCONTROL's en-route figure, which "
         "excludes the terminal area around each airport. The full "
         "gate-to-gate extension is larger, so fuel is still understated."
     ),
     (
-        "The Boeing 777-300ER is modelled 31 percent above its published "
-        "cruise burn. Long-haul flights dominate the CO2 total, so this "
-        "pushes the headline figure up. Worth either finding a better "
-        "reference or stating the effect on the total."
+        "The ICAO correction covers 16 types and 93 percent of the CO2; the "
+        "rest uses OpenAP as it is. The correction comes from a cruise "
+        "figure but scales the whole flight, climb and descent included."
     ),
     (
         "Taxi fuel is not counted at all, because OpenAP has no model for "
@@ -296,13 +312,8 @@ OPEN_QUESTIONS = [
         "file that can fill these in."
     ),
     (
-        "The published cruise figures in config/validation_reference.yml are "
-        "working numbers and still need proper citations."
-    ),
-    (
-        "Switzerland is counted as part of the European Economic Area in the "
-        "code, because it runs a linked carbon market. Strictly it is not in "
-        "the EEA. That choice needs stating in the writeup."
+        "CO2 under the UK and Swiss carbon markets (1.8 percent of the total) "
+        "is labelled but not priced. Each system has its own price."
     ),
 ]
 

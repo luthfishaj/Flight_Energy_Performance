@@ -5,9 +5,9 @@ produce, using public flight tracking data — and what those emissions cost
 under the EU carbon rules.
 
 **June 2022 in one line:** of 87,903 flights touching French airports, the
-59,772 that could be modelled burned 559,128 tonnes of fuel and emitted 1.77
-million tonnes of CO2, worth EUR 730 million in fuel and EUR 38 million in
-carbon allowances — and **74% of that CO2 falls outside the EU carbon
+59,772 that could be modelled burned 506,751 tonnes of fuel and emitted 1.60
+million tonnes of CO2, worth EUR 662 million in fuel and EUR 39 million in
+carbon allowances — and **70% of that CO2 falls outside the EU carbon
 market.**
 
 ![Overview page of the Power BI dashboard](powerbi/screenshots/01_overview.png)
@@ -262,10 +262,22 @@ board.** The source data does not say how full the plane was. So it measures
 the efficiency of the capacity offered, not of the people carried, and it is
 labelled that way everywhere.
 
-**The fuel totals were checked against published cruise figures.** Seven of
-the eight aircraft types checked agree within 15%. The Boeing 777-300ER
-comes out 31% high, which matters because long-haul dominates the CO2 total.
-Run `uv run flightperf build validate` to see the comparison.
+**The fuel model is checked against ICAO and corrected to it.** OpenAP's
+cruise burn was compared with ICAO's published fuel table for 16 aircraft
+types covering 93% of the CO2. Nine agreed within 15%. The Boeing 777 family
+came out 23–37% high and the A320neo and A321neo 23–31% low, so each
+checked type is scaled to match ICAO. That lowered total CO2 by 9.4%. The
+raw model output is kept alongside (`fuel_burn_kg`), and
+`calibrate_to_icao` in [`config/params.yml`](config/params.yml) switches the
+correction off. Run `uv run flightperf build validate` to see the
+comparison.
+
+**Carbon market coverage follows the 2022 rules, by direction.** Paris →
+London was in the EU ETS; London → Paris was in the UK ETS. Paris → Geneva
+was in the EU ETS; Geneva → Paris was in the Swiss ETS. Flights between
+the EEA and the outermost regions (Réunion, the Canaries, Madeira…) were
+exempt. Only the EU ETS share is priced. Sources are in
+[`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md).
 
 **Taxi fuel is not counted.** OpenAP has no model for engines at idle, and
 inventing a number would be worse than leaving it out.
@@ -281,11 +293,12 @@ June 2022, flights touching French airports:
 | Flights found | 87,903 |
 | Usable after the quality checks | 68,136 (77.5%) |
 | With a fuel figure | 59,772 |
-| Fuel burned | 559,128 tonnes |
-| CO2 | 1.77 million tonnes |
-| Fuel cost | EUR 730 million |
-| Carbon value | EUR 38 million |
-| Share of CO2 outside the EU carbon market | 74% |
+| Fuel burned | 506,751 tonnes |
+| CO2 | 1.60 million tonnes |
+| Fuel cost | EUR 662 million |
+| Carbon value (EU ETS) | EUR 39 million |
+| Share of CO2 outside the EU carbon market | 70% |
+| Share of CO2 under no carbon market at all | 68.5% |
 
 The busiest route by emissions is New York JFK to Paris Charles de Gaulle.
 Air France accounts for the largest share of any operator. Among short-haul
@@ -293,13 +306,15 @@ aircraft, the A320neo family comes out noticeably more efficient per seat
 than the older A320 and 737 generation.
 
 Airborne fuel only, with straight-line distances corrected upward by
-EUROCONTROL's 2022 en-route efficiency figure (+2.96%). Still
-underestimates, because taxi fuel is excluded and the correction covers the
-en-route phase only.
+EUROCONTROL's 2022 en-route efficiency figure (+2.96%) and each checked
+aircraft type corrected to ICAO's published fuel burn. Still
+underestimates, because taxi fuel is excluded and the distance correction
+covers the en-route phase only.
 
-**The most interesting result:** 74% of that CO2 falls outside the EU carbon
+**The most interesting result:** 70% of that CO2 falls outside the EU carbon
 market, because the long-haul routes that dominate emissions are not
-covered.
+covered. The UK and Swiss systems pick up only 1.8% more, so 68.5% of the
+CO2 from French air traffic carried no carbon price at all.
 
 ---
 

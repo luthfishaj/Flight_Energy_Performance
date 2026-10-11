@@ -4,26 +4,54 @@
 # the modelled cruise burn gets compared against these published figures,
 # and the comparison is reported rather than quietly buried.
 #
-# Tonnes of fuel per hour at a normal cruise altitude and weight.
+# Kilograms of fuel per nautical mile in cruise.
 #
-# IMPORTANT: these are working figures taken from typical published
-# performance data, and every one still needs a proper citation before it
-# is quoted anywhere. Manufacturer performance manuals, EUROCONTROL's
-# aircraft performance database, and airline fuel reports are the places to
-# look. Add the source next to each line as it gets confirmed.
+# Source: ICAO Carbon Emissions Calculator Methodology, Version 13.1
+# (August 2024), Appendix C "ICAO Fuel Consumption Table" - fuel in kg for
+# each aircraft type at set flight distances.
+# https://www.icao.int/sites/default/files/environmental-protection/ENVtools/SuportingMaterials/ICEC_Methodology_Passagers_v13_Final.pdf
+# Accessed 2026-10-11.
 #
-# Cruise burn varies with weight, altitude and speed, so no single number is
-# exactly right. Anything within about 10% counts as agreement.
+# How the figures were derived: the table gives whole-trip fuel, including
+# take-off, climb and descent. The difference between the 1,000 nm and
+# 2,000 nm columns is the fuel for 1,000 extra nautical miles of cruise -
+# climb and descent cost the same on both trips - so dividing by 1,000
+# gives cruise fuel per nautical mile. Each line shows the two table values.
+#
+# Why per nautical mile and not per hour: the table is by distance, and
+# turning it into an hourly figure would need an assumed cruise speed for
+# every type - another unsourced number. Per nautical mile is also what
+# matters here, because the model turns a distance into fuel.
+#
+# Cruise burn varies with weight, altitude and wind, so no single number is
+# exactly right. ICAO's figures are fleet averages for typical operations.
 
-cruise_burn_tonnes_per_hour:
-  A319: 2.3      # TODO: cite
-  A320: 2.5      # TODO: cite
-  A321: 2.9      # TODO: cite
-  B738: 2.6      # TODO: cite
-  A332: 5.8      # TODO: cite
-  A333: 6.1      # TODO: cite
-  B77W: 7.8      # TODO: cite
-  A388: 12.0     # TODO: cite
+#
+# The list covers the original eight types plus every other type that
+# carries a large share of the CO2 and that the model supports, so the
+# check covers most of the total rather than a convenient sample. The
+# A220-300 (BCS3) is in ICAO's table but OpenAP cannot model it.
+
+cruise_burn_kg_per_nm:
+  # Narrowbodies
+  A319: 5.40     # 319: 12,668 - 7,271
+  A320: 5.88     # 320: 13,648 - 7,772
+  A321: 6.85     # 321: 15,818 - 8,970
+  A20N: 5.26     # 32N: 11,497 - 6,236
+  A21N: 5.60     # 32Q: 12,595 - 6,992
+  B738: 5.71     # 738: 13,460 - 7,749
+  B38M: 5.15     # 7M8: 11,258 - 6,107
+  E190: 4.14     # E90:  9,913 - 5,778
+
+  # Widebodies
+  A332: 12.65    # 332: 28,973 - 16,321
+  A333: 13.22    # 333: 30,276 - 17,055
+  A359: 13.62    # 359: 27,441 - 13,821
+  A388: 28.95    # 388: 61,160 - 32,211
+  B772: 15.12    # 772: 33,982 - 18,866
+  B77L: 15.60    # 77L: 35,069 - 19,469 (777-200LR; the data's B77L are mostly 777F freighters)
+  B77W: 17.26    # 77W: 38,457 - 21,202
+  B789: 11.84    # 789: 24,636 - 12,801
 
 # How far from the published figure the model is allowed to be before the
 # check counts as a failure rather than a pass.

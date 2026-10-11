@@ -73,9 +73,12 @@ SELECT
     f.co2_kg / 1000.0                                       AS co2_tonnes,
     f.nox_kg,
 
-    -- KPI 2: how efficient was the flight, per distance and per seat
+    -- KPI 2: how efficient was the flight, per distance and per seat.
+    -- Uses the corrected fuel (KPI 3 below), so these agree with the
+    -- totals. The distance stays the straight line, which is what "per
+    -- kilometre" means to anyone comparing flights.
     CASE WHEN f.great_circle_nm > 0
-         THEN f.fuel_burn_kg / f.great_circle_nm
+         THEN f.fuel_burn_adjusted_kg / f.great_circle_nm
     END                                                     AS fuel_kg_per_nm,
 
     -- Per seat-kilometre. Note this uses the number of seats the aircraft
@@ -84,17 +87,19 @@ SELECT
     -- capacity offered, not of the passengers carried, and it is labelled
     -- that way on the dashboard. (1 nautical mile = 1.852 km.)
     CASE WHEN t.typical_seats > 0 AND f.great_circle_nm > 0
-         THEN f.fuel_burn_kg / (t.typical_seats * f.great_circle_nm * 1.852)
+         THEN f.fuel_burn_adjusted_kg / (t.typical_seats * f.great_circle_nm * 1.852)
     END                                                     AS fuel_kg_per_ask,
 
     CASE WHEN t.typical_seats > 0 AND f.great_circle_nm > 0
-         THEN f.co2_kg / (t.typical_seats * f.great_circle_nm * 1.852)
+         THEN f.co2_adjusted_kg / (t.typical_seats * f.great_circle_nm * 1.852)
     END                                                     AS co2_kg_per_ask,
 
-    -- KPI 3: corrected for the extra distance real flights fly.
+    -- KPI 3: corrected for the extra distance real flights fly, and to
+    -- ICAO's published fuel burn for the aircraft type.
     -- fuel_burn_kg above is the raw model output over the straight line;
     -- these are the figures to report. Both are kept so the size of the
-    -- correction is visible.
+    -- corrections is visible.
+    f.fuel_calibration_factor,
     f.fuel_burn_adjusted_kg,
     f.co2_adjusted_kg,
     f.co2_adjusted_kg / 1000.0                              AS co2_adjusted_tonnes,
@@ -108,7 +113,15 @@ SELECT
     f.fuel_cost_eur + f.ets_cost_eur                        AS total_cost_eur,
 
     f.is_domestic_fr,
-    f.is_intra_eea,
+    -- Worked out from the airports rather than read from fact_flight, so a
+    -- change to which countries count as EEA shows up without reloading
+    -- the flights.
+    ao.is_eea AND ad.is_eea                                 AS is_intra_eea,
+    -- Which carbon market covered the flight in 2022: EU ETS, UK ETS,
+    -- Swiss ETS or None. Use this, not is_intra_eea, for anything about
+    -- carbon coverage - direction matters (Paris-London is EU ETS,
+    -- London-Paris is UK ETS).
+    f.carbon_market,
     f.ets_scope_factor,
     f.co2_adjusted_kg / 1000.0 * f.ets_scope_factor          AS ets_chargeable_tonnes,
 

@@ -204,6 +204,56 @@ legs as well.
 > `https://transport.ec.europa.eu/system/files/2023-10/PRB_Annual_Monitoring_Report_2022.pdf`
 > Accessed 2026-09-25.
 
+### Calibration to ICAO — 16 aircraft types
+
+OpenAP is a generic physics model, so its fuel burn is checked against
+ICAO's published fuel table and corrected to it, type by type.
+
+> ICAO, *Carbon Emissions Calculator Methodology*, Version 13.1 (August
+> 2024), Appendix C "ICAO Fuel Consumption Table".
+> `https://www.icao.int/sites/default/files/environmental-protection/ENVtools/SuportingMaterials/ICEC_Methodology_Passagers_v13_Final.pdf`
+> Accessed 2026-10-11.
+
+The table gives whole-trip fuel at set distances. The difference between
+the 1,000 nm and 2,000 nm columns is 1,000 nm of extra cruise, so dividing
+by 1,000 gives cruise fuel per nautical mile without assuming a cruise
+speed. The 16 types checked cover 93% of the CO2. Before correction, 9 of
+16 were within 15%; the Boeing 777 family came out 23–37% high and the
+A320neo and A321neo 23–31% low. The figures and the arithmetic are in
+`config/validation_reference.yml`, and the correction lowers total CO2 by
+9.4%.
+
+### Carbon market scope — 2022 rules, by direction
+
+| Flight | Covered by |
+|---|---|
+| EEA → EEA | EU ETS |
+| EEA → Switzerland | EU ETS |
+| Switzerland → EEA | Swiss ETS |
+| EEA → UK | EU ETS |
+| UK → EEA | UK ETS |
+| EEA ↔ outermost regions (Réunion, Canaries, Madeira…) | none |
+| everything else | none |
+
+> European Commission, *Scope of the EU ETS*: aviation "within the European
+> Economic Area and departing flights to Switzerland and the United
+> Kingdom".
+> `https://climate.ec.europa.eu/eu-action/carbon-markets/eu-emissions-trading-system-eu-ets/scope-eu-ets_en`
+>
+> Transport & Environment, *2022 airlines' emission analysis —
+> Methodological note* (April 2023), Table 1, which gives the 2022
+> coverage by direction.
+> `https://uploads.transportenvironment.org/production/files/ETS_2023_methodological_note_updated_11_April-1.pdf`
+>
+> Directive 2003/87/EC Article 28a, extended to 2023 by Regulation (EU)
+> 2017/2392, for the outermost-region derogation.
+> `https://eur-lex.europa.eu/eli/reg/2017/2392/oj/eng`
+>
+> All accessed 2026-10-11.
+
+Only the EU ETS share is priced. Flights under the UK and Swiss systems
+(1.8% of the CO2) are labelled in `carbon_market` but not costed.
+
 ### What is deliberately left out
 
 **Free allocation is set to zero.** In 2022 airlines still received a large
@@ -212,12 +262,9 @@ choice, not an oversight: the result is the **market value of the covered
 emissions** — what they were worth — rather than the cash airlines actually
 paid. Every place the carbon figure appears says so.
 
-**Scope is unresolved.** Flights from the EEA to third countries are set to
-zero coverage. Switzerland is already treated as inside, because
-`ingest/airports.py` counts it as EEA on the grounds that it runs a linked
-carbon market. The UK is not, so flights to London are probably
-undercounted for 2022. This needs a source before it is changed, and it
-matters: it moves the headline finding that 74% of CO2 is uncovered.
+**UK and Swiss carbon prices.** CO2 covered by the UK and Swiss systems is
+identified but not priced: the question here is what the EU market covers,
+and each system has its own price.
 
 ---
 

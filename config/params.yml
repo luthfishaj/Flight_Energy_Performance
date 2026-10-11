@@ -67,18 +67,54 @@ eu_ets:
   # cost is reported has to say so.
   free_allocation_share: 0.0
 
-  # Which flights the EU carbon market covers, as a share of their CO2.
-  # Read by kpi/costs.py, which sets ets_scope_factor per flight from these.
+  # Which flights the EU carbon market covered in 2022, and which carbon
+  # market (if any) covered the rest. Read by kpi/costs.py, which sets
+  # carbon_market and ets_scope_factor per flight.
   #
-  # Note on Switzerland: ingest/airports.py counts CH as EEA because it
-  # runs a linked carbon market, so Paris-Geneva is already treated as
-  # fully covered. The UK is NOT in that list, so flights to London get
-  # 0.0 here and are probably undercounted for 2022.
-  # TODO: find a source for the 2022 scope, then revisit both.
-  scope:
-    intra_eea: 1.0
-    eea_to_third_country: 0.0
-    third_country_to_eea: 0.0
+  # In 2022 the EU ETS ran in its "reduced scope", and the direction of a
+  # flight matters:
+  #
+  #   EEA -> EEA            EU ETS
+  #   EEA -> Switzerland    EU ETS      (EU-Swiss linking agreement, 2020)
+  #   Switzerland -> EEA    Swiss ETS   (linked, but a separate system)
+  #   EEA -> UK             EU ETS      (after Brexit, from 2021)
+  #   UK -> EEA             UK ETS      (separate system, not linked)
+  #   EEA <-> outermost     none        (derogation, see below)
+  #   anything else         none
+  #
+  # Sources:
+  # - European Commission, "Scope of the EU ETS": aviation "within the
+  #   European Economic Area and departing flights to Switzerland and the
+  #   United Kingdom".
+  #   https://climate.ec.europa.eu/eu-action/carbon-markets/eu-emissions-trading-system-eu-ets/scope-eu-ets_en
+  # - Transport & Environment, "2022 airlines' emission analysis -
+  #   Methodological note" (April 2023), Table 1, which gives the coverage
+  #   by direction for 2022 exactly as above.
+  #   https://uploads.transportenvironment.org/production/files/ETS_2023_methodological_note_updated_11_April-1.pdf
+  # - Outermost regions: Directive 2003/87/EC Article 28a, as extended to
+  #   2023 by Regulation (EU) 2017/2392, derogated flights between the EEA
+  #   and the outermost regions (Article 349 TFEU).
+  #   https://eur-lex.europa.eu/eli/reg/2017/2392/oj/eng
+  # Accessed 2026-10-11.
+  #
+  # Only the EU ETS share is priced, at the EUA price above. CO2 under the
+  # UK and Swiss systems is labelled but not costed: they have their own
+  # prices, and the question is what the EU market covers.
+  scope_year: 2022
+
+  # Departing from the EEA to these countries counts as EU ETS.
+  eu_ets_departures_to: [CH, GB]
+
+  # Departing from these countries to the EEA falls under their own system.
+  other_schemes_to_eea:
+    CH: Swiss ETS
+    GB: UK ETS
+
+  # Outermost regions. The French ones have their own country codes in
+  # OurAirports; the Spanish and Portuguese ones only differ by region.
+  outermost_regions:
+    countries: [GP, GF, MQ, YT, RE, MF]  # Guadeloupe, Guiana, Martinique, Mayotte, Reunion, Saint-Martin
+    regions: [ES-CN, PT-20, PT-30]       # Canary Islands, Azores, Madeira
 
 refueleu:
   # Rules requiring a minimum share of sustainable fuel at EU airports.
@@ -111,6 +147,22 @@ fuel_model:
   # the corrected figure. Keeping both means the size of the correction
   # stays visible.
   route_extension_factor: 1.0296
+
+  # Correct the model to ICAO's published fuel burn, type by type.
+  #
+  # The validation (uv run flightperf build validate) compares OpenAP's
+  # cruise burn with ICAO's fuel table for 16 aircraft types covering 93%
+  # of the CO2. Most agree within 15%, but OpenAP overstates the Boeing 777
+  # family by 23-37% and understates the A320neo and A321neo by 23-31%.
+  # With this on, each checked type is scaled by ICAO / model; types
+  # modelled through a stand-in use the stand-in's factor; everything else
+  # is left alone. Applied by kpi/costs.py with the route extension, so
+  # fuel_burn_kg stays the raw model output.
+  #
+  # ICAO is treated as the reference because it is built from airline fuel
+  # data for each type. The factors are derived from
+  # config/validation_reference.yml on every run, never typed in here.
+  calibrate_to_icao: true
 
   # Flights are assumed to be carrying a typical load rather than being
   # empty or full. Passenger numbers are not in the data.

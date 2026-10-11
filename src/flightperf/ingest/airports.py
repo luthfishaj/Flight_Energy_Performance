@@ -25,16 +25,19 @@ PUBLISHER = "OurAirports (David Megginson)"
 URL = "https://davidmegginson.github.io/ourairports-data/airports.csv"
 LICENCE = "Public domain"
 
-# Countries in the European Economic Area, needed to decide which flights
-# the EU carbon rules cover. EEA = the EU plus Iceland, Liechtenstein and
-# Norway. Switzerland is not in the EEA but runs a linked carbon market, so
-# it is included here and the choice is noted in the writeup.
+# Countries in the European Economic Area: the EU plus Iceland,
+# Liechtenstein and Norway. This is geography only. Which carbon market
+# covers a flight depends on its direction as well - Switzerland and the UK
+# are handled by kpi/costs.py using the rules in params.yml.
+#
+# Switzerland used to be in this list because it runs a linked carbon
+# market. That made Geneva-Paris count as EU ETS when in 2022 it fell under
+# the Swiss ETS, so it was taken out.
 EEA_COUNTRIES = [
     "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR",
     "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK",
     "SI", "ES", "SE",              # EU member states
     "IS", "LI", "NO",              # the rest of the EEA
-    "CH",                          # linked carbon market, not EEA
 ]
 
 # The staging table mirrors the CSV exactly - every column is text, so a

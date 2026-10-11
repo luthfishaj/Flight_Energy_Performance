@@ -92,7 +92,7 @@ employers actually care about.
 | Airline names | Done — 323 of 451 operators named |
 | Source tracking | Done — URL, date, size, checksum per file |
 | Quality checks | Done — 15 checks, 77.5% of flights usable |
-| Fuel model | Done — validated, 7 of 8 types within 15% |
+| Fuel model | Done — checked against ICAO for 16 types (93% of CO2) and corrected to it |
 | Carbon costs | Done — priced at June 2022 market prices |
 | Power BI dashboard | Done — five pages, screenshots in the README |
 
@@ -105,14 +105,15 @@ The headline numbers for June 2022:
 
 - **87,903** flights touching French airports
 - **77.5%** of them usable after the quality checks
-- **559,128 tonnes** of fuel and **1.77 million tonnes** of CO2, across the
+- **506,751 tonnes** of fuel and **1.60 million tonnes** of CO2, across the
   59,772 flights that could be modelled
-- **EUR 730 million** of fuel, and **EUR 38 million** of carbon at June 2022
+- **EUR 662 million** of fuel, and **EUR 39 million** of carbon at June 2022
   allowance prices
 - Busiest route by emissions: **New York JFK to Paris CDG**
 - **Air France** accounts for the largest share
-- **74% of the CO2 falls outside the EU carbon market**, because the
-  long-haul flights that dominate emissions are not covered
+- **70% of the CO2 falls outside the EU carbon market**, because the
+  long-haul flights that dominate emissions are not covered — and 68.5%
+  falls under no carbon market at all
 
 The prices are researched and in `config/params.yml`, each with its
 source and the date it was read.
@@ -140,14 +141,26 @@ cost totals:
 
 ## What happens next, in order
 
-1. **Write up the finding.** The strongest one so far: 74% of the CO2 from
-   French air traffic falls outside the EU carbon market, because the
-   long-haul flights that dominate emissions are not covered.
-2. **Settle the scope question.** Whether flights to the UK and
-   Switzerland were covered in 2022 moves that 74% figure directly, so it
-   needs a source.
-3. **Cite the eight cruise-burn figures** in validation_reference.yml.
-4. **Load June 2019 too**, to compare a pre-COVID month against 2022.
+The project is complete. What is left is optional:
+
+1. **Write up the finding** — 70% of the CO2 from French air traffic falls
+   outside the EU carbon market — as an article or post.
+2. **Load June 2019 too**, to compare a pre-COVID month against 2022.
+
+### Closing the last open questions
+
+- **Carbon market scope.** The 2022 rules depend on direction: Paris →
+  London and Paris → Geneva were in the EU ETS, but London → Paris was in
+  the UK ETS and Geneva → Paris in the Swiss ETS. Flights to the outermost
+  regions (Réunion, the Canaries, Madeira) were exempt. The code used to
+  count Switzerland as fully in and the UK as fully out. Fixing it moved
+  the headline from 74% to 73% outside the EU market, before calibration.
+- **Validation sources.** The eight cruise-burn figures were uncited working
+  numbers. They are now taken from ICAO's published fuel table, and the
+  check was widened to 16 types covering 93% of the CO2. Against ICAO, the
+  777 family came out 23–37% high and the A320neo and A321neo 23–31% low,
+  so the model is now corrected to ICAO type by type. Total CO2 fell 9.4%,
+  from 1.77 to 1.60 million tonnes; the headline moved to 70%.
 
 ### How to run the whole thing
 
@@ -226,9 +239,9 @@ These get stated wherever the numbers appear, rather than hidden.
 - **Taxi fuel is not counted.** OpenAP has no model for engines at idle,
   and inventing a number would be worse than leaving it out. Real block
   fuel is a few percent higher than these figures.
-- **The Boeing 777-300ER runs 31% high** in OpenAP compared with published
-  cruise figures. Every other type checked agrees within 15%. This is
-  reported by `build validate` rather than hidden, and it matters because
-  long-haul flights dominate the CO2 total.
+- **The fuel model is corrected to ICAO for 16 types**, covering 93% of
+  the CO2. The other 7% uses OpenAP as it is. The correction is from a
+  cruise figure but scales the whole flight, which is fine for all but the
+  shortest hops.
 - **Only 53 of 260 aircraft types can be modelled**, though those 53 cover
   88% of flights. The rest are mostly small private aircraft.

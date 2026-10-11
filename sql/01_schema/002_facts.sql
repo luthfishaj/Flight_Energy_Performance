@@ -67,6 +67,8 @@ CREATE TABLE IF NOT EXISTS core.fact_flight (
     is_domestic_fr          BOOLEAN,
     is_intra_eea            BOOLEAN,
     ets_scope_factor        DOUBLE PRECISION,                 -- how much of the CO2 the EU ETS covers
+    carbon_market           VARCHAR,                -- EU ETS / UK ETS / Swiss ETS / None
+    fuel_calibration_factor DOUBLE PRECISION,       -- correction to ICAO's fuel table, 1.0 = none
 
     -- Filled in by the quality step.
     quality_score           DOUBLE PRECISION,                 -- between 0 and 1
@@ -82,6 +84,12 @@ CREATE TABLE IF NOT EXISTS core.fact_flight (
     CONSTRAINT chk_times CHECK (last_seen_utc >= first_seen_utc),
     CONSTRAINT chk_fuel  CHECK (fuel_burn_kg IS NULL OR fuel_burn_kg >= 0)
 );
+
+-- Added after the first release. CREATE TABLE IF NOT EXISTS skips a table
+-- that already exists, so a database built before then needs the column
+-- added here - before 03_marts creates the view that reads it.
+ALTER TABLE core.fact_flight ADD COLUMN IF NOT EXISTS carbon_market VARCHAR;
+ALTER TABLE core.fact_flight ADD COLUMN IF NOT EXISTS fuel_calibration_factor DOUBLE PRECISION;
 
 
 -- One row per problem found, per flight.

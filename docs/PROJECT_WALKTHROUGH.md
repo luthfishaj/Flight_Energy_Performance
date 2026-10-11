@@ -42,10 +42,12 @@ comments saying why it does what it does.
 > registry to look the missing types up - that recovered 99% of them and
 > took usable data from 50% to 78%.
 >
-> I also validated the fuel model against published cruise-burn figures.
-> Seven of the eight aircraft types I checked agree within 15%. The Boeing
-> 777-300ER comes out 31% high, which I report rather than hide, because
-> long-haul flights dominate the emissions total.
+> I also validated the fuel model against ICAO's published fuel table for
+> 16 aircraft types, covering 93% of the CO2. The narrowbodies agreed
+> within a few percent, but the model overstated the Boeing 777 family by
+> up to 37% - and the 777s are 40% of the emissions. So I corrected each
+> type to ICAO, kept the raw output alongside, and the total came down
+> 9.4%.
 
 That last paragraph is the one that separates you from other candidates.
 Most people present a model. Few present its error bars.
@@ -739,16 +741,20 @@ The data quality. Half the flights were unusable at first. Working out
 being a lost cause, was the difference between a real result and a toy.
 
 **"How do you know your fuel numbers are right?"**
-I do not know they are right, I know how wrong they are. I compared
-modelled cruise burn against published figures for eight aircraft types.
-Seven agree within 15%. The 777-300ER is 31% high, which matters because
-long-haul dominates the total, so the headline CO2 figure is probably
-somewhat overstated.
+I do not know they are right, I know how wrong they were. I compared
+the model's cruise burn per nautical mile against ICAO's published fuel
+table for 16 aircraft types covering 93% of the CO2. Nine agreed within
+15%. The 777 family was 23-37% high and the A320neo 31% low, so each
+checked type is now scaled to ICAO. The raw model output is still in the
+data, so the size of the correction - minus 9.4% on the total - is
+visible.
 
 **"What would you do differently?"**
 Get the aircraft registry in from the start - I spent effort on a data
 quality problem that turned out to have a lookup-table answer. And I would
-find a better performance reference for widebodies.
+have checked the model against an independent source for the big
+emitters first, not a convenient sample: the original eight-type check
+missed the 777-200, the biggest error.
 
 **"Why not use machine learning?"**
 There was a candidate problem - predicting the 37% of missing aircraft
@@ -771,8 +777,9 @@ Six, all documented.
 5. The carbon figure is the market value of the emissions, not cash paid -
    free allocation is deliberately ignored, and in 2022 airlines still
    received a large share of allowances free.
-6. The Boeing 777-300ER is modelled 31% above published cruise burn, which
-   pushes the long-haul total up.
+6. The ICAO correction covers 93% of the CO2; the remaining types use the
+   physics model as it is. And the correction comes from a cruise figure
+   but scales the whole flight.
 
 **"How would you scale this?"**
 The pipeline already handles any month from 2019 to 2022 - it is one
