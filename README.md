@@ -55,9 +55,6 @@ Four files. All direct downloads, no account and no registration.
 | [OpenSky aircraft registry](https://s3.opensky-network.org/data-samples/metadata/) | Fills in missing aircraft types | 61 MB | Free to use |
 | [OpenFlights](https://github.com/jpatokal/openflights) | Airline codes to names | 400 KB | ODbL |
 
-Full details, including what the data can and cannot tell you, are in
-[`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md).
-
 Every file that gets used is recorded in the `dim_source` table with its
 URL, download date, size, checksum and row count:
 
@@ -142,9 +139,7 @@ uncompressed gigabyte never has to exist as a file.
 | `sql/04_quality/` | The data quality checks |
 | `src/flightperf/` | Downloading, fuel model, CLI |
 | `powerbi/` | The report file and screenshots |
-| `files/` | Project summary document, updated as the work progresses |
 | `scripts/` | Helper scripts that aren't part of the pipeline |
-| `docs/` | Roadmap, data sources, method notes and results |
 
 ### The tables
 
@@ -217,27 +212,6 @@ at an encrypted connection fails. Accept the offer to connect unencrypted,
 or untick *Encrypt connections* under File → Options and settings → Data
 source settings.
 
-### The reference document
-
-`files/Project_Summary.docx` is the notes file — everything about the
-project in one place, written to be read and studied rather than skimmed:
-a glossary of the aviation terms, the full detail and links for both data
-sources, what the data can and cannot tell you, every table and column,
-every quality check, the KPI formulas, the commands, and the progress log.
-
-The Word file is not edited by hand. Static explanations live in
-[`scripts/update_summary.py`](scripts/update_summary.py), and the factual
-parts — row counts, the quality checks, the columns in each table, which
-files were downloaded — are read straight out of the database each time it
-runs. So the document cannot quietly go out of date.
-
-```bash
-uv run python scripts/update_summary.py
-```
-
-Add a line to the progress log in that script whenever a step is finished,
-then regenerate.
-
 ---
 
 ## Things to be careful about
@@ -271,8 +245,7 @@ comparison.
 London was in the EU ETS; London → Paris was in the UK ETS. Paris → Geneva
 was in the EU ETS; Geneva → Paris was in the Swiss ETS. Flights between
 the EEA and the outermost regions (Réunion, the Canaries, Madeira…) were
-exempt. Only the EU ETS share is priced. Sources are in
-[`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md).
+exempt. Only the EU ETS share is priced.
 
 **Taxi fuel is not counted.** OpenAP has no model for engines at idle, and
 inventing a number would be worse than leaving it out.
