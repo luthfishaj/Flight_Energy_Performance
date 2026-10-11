@@ -4,10 +4,17 @@ Working out how much fuel and CO2 flights to and from French airports
 produce, using public flight tracking data — and what those emissions cost
 under the EU carbon rules.
 
-> **Work in progress.** The database, the two data loaders and the SQL are
-> done, with a month of real flights loaded. The fuel model, the quality
-> checks and the Power BI report are still to come.
->
+**June 2022 in one line:** of 87,903 flights touching French airports, the
+59,772 that could be modelled burned 559,128 tonnes of fuel and emitted 1.77
+million tonnes of CO2, worth EUR 730 million in fuel and EUR 38 million in
+carbon allowances — and **74% of that CO2 falls outside the EU carbon
+market.**
+
+![Overview page of the Power BI dashboard](powerbi/screenshots/01_overview.png)
+
+The pipeline runs end to end, from raw downloads to a five-page Power BI
+dashboard. [See all five pages](#the-dashboard).
+
 > New here? Start with [`docs/roadmap.md`](docs/roadmap.md) for what this
 > is, then [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) for how to
 > run it. [`docs/PROJECT_WALKTHROUGH.md`](docs/PROJECT_WALKTHROUGH.md)
@@ -83,9 +90,8 @@ one command.
 **There is no flight path, only the endpoints.** So the distance used is the
 straight line between the two airports. Real flights are longer than that,
 which means every fuel figure is an underestimate unless corrected. The
-correction factor lives in
-[`config/params.yml`](config/params.yml) and is deliberately left empty until
-a published figure is found to back it.
+correction factor lives in [`config/params.yml`](config/params.yml): +2.96%,
+EUROCONTROL's published 2022 en-route flight efficiency figure.
 
 ---
 
@@ -123,8 +129,9 @@ calculations already happened in `core.v_flight_kpi`. A KPI formula hidden
 inside the `.pbix` file could not be diffed between versions.
 
 **PostgreSQL.** A real database server, the same kind used at work, and the
-one named in most job adverts. Power BI connects to it directly, so the
-report reads live data instead of importing exported files.
+one named in most job adverts. Power BI connects to it directly and imports
+from the view, so there are no exported files in between — rerun the
+pipeline, press Refresh, and the report is up to date.
 
 The 200 MB compressed flight list is streamed into it with `COPY`: Python
 unzips a block at a time and passes it straight to the server, so the
@@ -178,21 +185,42 @@ uv run flightperf ingest flights --year 2022 --month 6
 uv run flightperf build quality
 uv run flightperf build fuel
 uv run flightperf build validate
+uv run flightperf build kpi
 uv run flightperf status
 ```
 
 The ingest commands can be run in any order — the reference data is stored,
 so loading the aircraft registry before the flights is not a wasted step.
+Reloading reference data after the fuel model has run means running
+`build quality`, `build fuel` and `build kpi` again afterwards.
 
 That is the whole setup. The first flight download is about 200 MB and takes
 a few minutes; after that it is cached and never fetched again.
 
-One step is still blocked. `build kpi` turns CO2 into money, and it refuses
-to run until the carbon price, the jet fuel price and the route-extension
-factor are filled into [`config/params.yml`](config/params.yml). Run it and
-it prints exactly what is missing.
+`build kpi` turns CO2 into money using the carbon price, the jet fuel price
+and the route-extension factor in [`config/params.yml`](config/params.yml).
+If any of them is missing it stops and prints what is missing, rather than
+treating it as zero.
 
 Each step is separate so that one can be rerun without redoing the download.
+
+### Opening the dashboard
+
+Open [`powerbi/dashboard.pbix`](powerbi/dashboard.pbix) in Power BI Desktop
+(Windows, free) and press **Refresh**. It connects to the database with:
+
+| Setting | Value |
+|---|---|
+| Connector | **PostgreSQL database** — not SQL Server, which fails with a "pre-login handshake" error |
+| Server | `localhost:5432` |
+| Database | `flightperf` |
+| Mode | Import |
+| Credentials | Database: `postgres` and the password from `.env` |
+
+A local PostgreSQL install has SSL switched off, so Power BI's first attempt
+at an encrypted connection fails. Accept the offer to connect unencrypted,
+or untick *Encrypt connections* under File → Options and settings → Data
+source settings.
 
 ### The reference document
 
@@ -244,7 +272,7 @@ inventing a number would be worse than leaving it out.
 
 ---
 
-## Results so far
+## Results
 
 June 2022, flights touching French airports:
 
@@ -272,6 +300,41 @@ en-route phase only.
 **The most interesting result:** 74% of that CO2 falls outside the EU carbon
 market, because the long-haul routes that dominate emissions are not
 covered.
+
+---
+
+## The dashboard
+
+Five pages in Power BI, built on the `core.v_flight_kpi` view. Every KPI
+counts only the flights that passed the quality checks; the last page shows
+what was excluded and why.
+
+**1. Overview** — totals, CO2 by day, the weekday pattern, domestic against
+international, and the largest emitters by airline.
+
+![Overview](powerbi/screenshots/01_overview.png)
+
+**2. Routes & Airports** — where the CO2 is emitted. The long-haul routes
+into Paris CDG dominate: New York JFK alone is the largest.
+
+![Routes and airports](powerbi/screenshots/02_routes_and_airports.png)
+
+**3. Airlines & Aircraft** — efficiency in grams of CO2 per seat-kilometre.
+Cargo airlines are excluded, since they have no seats to divide by, and
+airlines and types with under 500 flights are hidden so one-off flights do
+not dominate the ranking.
+
+![Airlines and aircraft](powerbi/screenshots/03_airlines_and_aircraft.png)
+
+**4. Carbon Cost** — fuel cost against EU ETS cost by airline, and how much
+of the CO2 the carbon market actually covers.
+
+![Carbon cost](powerbi/screenshots/04_carbon_cost.png)
+
+**5. Data Quality** — how many flights each of the 15 checks rejected. The
+two biggest reasons are a missing departure or arrival airport.
+
+![Data quality](powerbi/screenshots/05_data_quality.png)
 
 ---
 

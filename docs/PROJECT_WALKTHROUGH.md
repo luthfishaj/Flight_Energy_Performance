@@ -261,6 +261,15 @@ covers, set from `config/airports_fr.yml`. `is_eea` drives the carbon scope.
 - `openap_supported` - whether fuel can be modelled at all. **53 of 260 types, but those 53 cover 88% of flights.**
 - `openap_proxy_type` - where a similar aircraft was substituted, e.g. a 737-500 modelled as a 737-400
 
+`manufacturer` and `model` come from the aircraft registry, and each type
+takes the **most common** value among its aircraft. The first version took
+the first one alphabetically, and the registry has a few aircraft filed
+under the wrong type code - so one misfiled glider renamed every B737 as an
+"Alexander Schleicher ASK-21Mi". Fuel was never affected, because it is
+worked out from `type_icao`, but the labels on the dashboard were wrong.
+The model is still the most common *variant* (`BOEING 737-8AS`), which is
+why the dashboard labels types by `type_icao` instead.
+
 ### `dim_aircraft` — 6,134 rows
 
 `icao24` (key), `registration`, `type_icao`, `operator_icao`,
@@ -272,7 +281,12 @@ covers, set from `config/airports_fr.yml`. `is_eea` drives the carbon scope.
 `is_low_cost`, `n_flights_seen`.
 
 `is_cargo` matters because a freight airline carries no passengers, so every
-per-seat metric is meaningless for it.
+per-seat metric is meaningless for it. The airline list has no cargo flag,
+so it is set two ways: by name ("Bluebird Cargo") and by a short list of
+ICAO codes for the big operators whose names give nothing away - FedEx is
+listed as "Federal Express" and DHL's hub airline as "European Air
+Transport". 11 operators, 3,229 flights. The list is `CARGO_OPERATORS` in
+`src/flightperf/ingest/enrich.py`.
 
 ### `dim_date` — 1,461 rows
 

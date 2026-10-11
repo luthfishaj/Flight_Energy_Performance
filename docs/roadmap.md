@@ -77,7 +77,7 @@ employers actually care about.
 | **PostgreSQL** | Stores the data and does the calculations. A real database server, the kind used at work. |
 | **SQL** | Where the actual logic lives — distances, the KPIs, the quality checks |
 | **Python** | Downloads the files and runs the fuel physics, which SQL cannot do |
-| **Power BI** | The dashboard people look at. Connects straight to PostgreSQL. |
+| **Power BI** | The dashboard people look at. Imports straight from PostgreSQL. |
 
 ---
 
@@ -94,11 +94,12 @@ employers actually care about.
 | Quality checks | Done — 15 checks, 77.5% of flights usable |
 | Fuel model | Done — validated, 7 of 8 types within 15% |
 | Carbon costs | Done — priced at June 2022 market prices |
-| Power BI dashboard | **Waiting on you** — needs the desktop app |
+| Power BI dashboard | Done — five pages, screenshots in the README |
 
-**Right now:** everything that can be done without outside input is done.
-The pipeline runs end to end from an empty database: three reference files
-and one month of flights in, fuel, CO2 and costs out.
+**Right now:** the first full version is finished. The pipeline runs end
+to end from an empty database: three reference files and one month of
+flights in, fuel, CO2 and costs out, and a five-page Power BI dashboard on
+top.
 
 The headline numbers for June 2022:
 
@@ -113,24 +114,40 @@ The headline numbers for June 2022:
 - **74% of the CO2 falls outside the EU carbon market**, because the
   long-haul flights that dominate emissions are not covered
 
-The prices are now researched and in `config/params.yml`, each with its
-source and the date it was read. One thing is left that has to be done by
-hand: **the Power BI dashboard**, because it is a desktop app.
+The prices are researched and in `config/params.yml`, each with its
+source and the date it was read.
+
+### What building the dashboard turned up
+
+Looking at the charts exposed two data bugs that the totals had hidden,
+plus a third found while fixing them. None of them changed the fuel, CO2 or
+cost totals:
+
+- **Wrong aircraft names.** Each type took the first manufacturer
+  alphabetically from the registry, so a single misfiled glider renamed
+  every Boeing 737 as an "Alexander Schleicher ASK-21Mi". Each type now
+  takes the most common name among its aircraft.
+- **No airline flagged as cargo.** Loading flights rebuilt the operator
+  table and wiped the flag, and the name check would have missed FedEx
+  anyway — the source calls it "Federal Express". Cargo is now spotted by
+  ICAO code as well as by name: 11 operators, 3,229 flights. They are
+  excluded from the per-seat charts.
+- **Reloading aircraft data crashed after the fuel step.** The rebuild
+  deleted aircraft types the fuel curves still pointed at. It now updates
+  them in place, so the ingest commands really can run in any order.
 
 ---
 
 ## What happens next, in order
 
-1. **Build the dashboard.** Power BI, connected straight to PostgreSQL.
-   Three pages: overview, efficiency, and data quality.
-2. **Write up the finding.** The strongest one so far: 74% of the CO2 from
+1. **Write up the finding.** The strongest one so far: 74% of the CO2 from
    French air traffic falls outside the EU carbon market, because the
    long-haul flights that dominate emissions are not covered.
-3. **Settle the scope question.** Whether flights to the UK and
+2. **Settle the scope question.** Whether flights to the UK and
    Switzerland were covered in 2022 moves that 74% figure directly, so it
    needs a source.
-4. **Cite the eight cruise-burn figures** in validation_reference.yml.
-5. **Load June 2019 too**, to compare a pre-COVID month against 2022.
+3. **Cite the eight cruise-burn figures** in validation_reference.yml.
+4. **Load June 2019 too**, to compare a pre-COVID month against 2022.
 
 ### How to run the whole thing
 
@@ -143,7 +160,7 @@ uv run flightperf ingest flights --year 2022 --month 6
 uv run flightperf build quality
 uv run flightperf build fuel
 uv run flightperf build validate
-uv run flightperf build kpi          # needs the prices first
+uv run flightperf build kpi
 ```
 
 The ingest commands can be run in any order.

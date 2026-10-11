@@ -206,6 +206,31 @@ PROGRESS = [
             "rows, now removed on load."
         ),
     ),
+    (
+        "2026-10-11",
+        "Power BI dashboard built",
+        (
+            "Five pages on top of core.v_flight_kpi: overview, routes and "
+            "airports, airlines and aircraft, carbon cost, and data quality. "
+            "Every KPI counts only flights that passed the quality checks. "
+            "Power BI imports straight from PostgreSQL, so a pipeline rerun "
+            "plus Refresh brings it up to date."
+        ),
+    ),
+    (
+        "2026-10-11",
+        "Three bugs the dashboard exposed",
+        (
+            "Aircraft types were named after the first registry entry "
+            "alphabetically, so a misfiled glider renamed every B737; each "
+            "type now takes the most common name. No airline was flagged as "
+            "cargo, because loading flights wiped the flag and the name check "
+            "missed 'Federal Express'; cargo is now also spotted by ICAO code "
+            "(11 operators, 3,229 flights). And reloading aircraft data after "
+            "the fuel step crashed on a foreign key; the rebuild now updates "
+            "in place. Fuel, CO2 and cost totals were unchanged."
+        ),
+    ),
 ]
 
 
@@ -223,12 +248,11 @@ STATUS = [
     ("Fuel model", "Done", "OpenAP; fuel and CO2 for 59,772 flights"),
     ("Model validation", "Done", "7 of 8 types within 15 percent of published"),
     ("Carbon costs", "Done", "Priced at June 2022 market prices, sources cited"),
-    ("Power BI report", "Not started", "Needs the prices, and is built by hand"),
+    ("Power BI report", "Done", "Five pages, built on core.v_flight_kpi"),
 ]
 
 
 NEXT_STEPS = [
-    "Build the Power BI report: overview, efficiency, and data quality pages.",
     (
         "Write up the finding: 74 percent of the CO2 from French air traffic "
         "falls outside the EU carbon market, because the long-haul flights "
